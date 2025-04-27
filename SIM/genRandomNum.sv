@@ -3,7 +3,7 @@
  * @Email        :
  * @Date         : 2025-04-25 20:39:36
  * @LastEditors  : Xu Xiaokang
- * @LastEditTime : 2025-04-26 22:15:32
+ * @LastEditTime : 2025-04-27 10:49:42
  * @Filename     :
  * @Description  :
 */
@@ -22,37 +22,50 @@ timeprecision 1ps;
 //-- 仿真时间尺度 ------------------------------------------------------------
 
 
-//++ 随机种子 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//++ 随机种子 与 种子数组 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /*
 * 通过调用C语言函数获取系统时间作为种子,
 * 重启仿真种子会变化
 */
 import "DPI-C" function longint get_system_time();
 longint timestamp_us;
-int seed;
+int timestamp_seed;
 initial begin
   timestamp_us = get_system_time();
   $display("timestamp_us = ", timestamp_us);
-  seed = int'(timestamp_us ^ (timestamp_us >> 32)); // 高低位异或
-  $display("seed = ", seed);
-  $srandom(seed); //* 指定全局种子
+  timestamp_seed = int'(timestamp_us ^ (timestamp_us >> 32)); // 高低位异或
+  $display("seed = ", timestamp_seed);
 end
-//-- 随机种子 ------------------------------------------------------------
+
 /*
 * 通过外部TCL命令获取系统时间，再传递给SEED参数作为种子
 * 需关闭仿真再启动仿真种子才会变化，重启仿真种子不变
 */
 // parameter int SEED = 0;
 // initial begin
-//   $srandom(SEED); //* 指定全局种子
+//   seed = SEED;
 //   $display("the SEED is %d", SEED);
 // end
-//-- 随机种子 ------------------------------------------------------------
+
+int seeds [100];
+initial begin
+  #1;
+  $srandom(timestamp_seed);
+  foreach (seeds[i]) begin
+    seeds[i] = $urandom();  //* 使用 $urandom() 初始化 seeds 数组
+  end
+  for (int i=0; i<10; i++) begin
+    $display("seeds[%0d] = 0x%08x", i, seeds[i]);
+  end
+end
+//-- 随机种子 与 种子数组 ------------------------------------------------------------
 
 
 //++ 生成随机数 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 int unsigned num1;
 initial begin
+  #2;
+  $srandom(seeds[0]); //* 指定此initial线程的初始种子
   repeat(10) begin
     num1 = $urandom_range(0, 2**31);
     $display("num1 = ", num1);
